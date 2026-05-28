@@ -2,8 +2,7 @@ use termimad::MadSkin;
 
 /// Create a custom terminal markdown skin with colors
 pub fn create_skin() -> MadSkin {
-    let skin = MadSkin::default();
-    skin
+    MadSkin::default()
 }
 
 /// Render markdown text for terminal display

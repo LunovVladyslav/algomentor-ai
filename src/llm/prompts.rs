@@ -1,5 +1,4 @@
-/// System prompts for the AI mentor, adapted by skill level.
-
+//! System prompts for the AI mentor, adapted by skill level.
 /// Get the system prompt for the mentor based on user level and language
 pub fn get_mentor_system_prompt(level: &str, language: &str) -> String {
     let lang_instruction = match language {

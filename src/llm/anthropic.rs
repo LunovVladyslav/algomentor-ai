@@ -90,7 +90,7 @@ impl LlmProvider for AnthropicProvider {
         let status = resp.status();
         if !status.is_success() {
             let error_body = resp.text().await.unwrap_or_default();
-            anyhow::bail!("Anthropic API error ({}): {}", status, error_body);
+            anyhow::bail!("Anthropic API error ({}): {}", status, crate::utils::error::parse_api_error(&error_body));
         }
 
         let json: serde_json::Value = resp.json().await?;
@@ -131,7 +131,7 @@ impl LlmProvider for AnthropicProvider {
         let status = resp.status();
         if !status.is_success() {
             let error_body = resp.text().await.unwrap_or_default();
-            anyhow::bail!("Anthropic API error ({}): {}", status, error_body);
+            anyhow::bail!("Anthropic API error ({}): {}", status, crate::utils::error::parse_api_error(&error_body));
         }
 
         let byte_stream = Box::pin(resp.bytes_stream());
