@@ -23,6 +23,8 @@ pub enum ChatCommand {
     Help,
     /// Quit the chat
     Quit,
+    /// Change the active model
+    Model(String),
     /// Unknown command
     Unknown(String),
 }
@@ -40,7 +42,14 @@ pub fn parse_command(input: &str) -> ChatCommand {
     }
 
     let cmd = trimmed.to_lowercase();
-    match cmd.as_str() {
+    let parts: Vec<&str> = trimmed.split_whitespace().collect();
+    let base_cmd = parts[0].to_lowercase();
+    
+    if (base_cmd == "/model" || base_cmd == "/m") && parts.len() > 1 {
+        return ChatCommand::Model(parts[1..].join(" "));
+    }
+
+    match base_cmd.as_str() {
         "/hint" | "/h" => ChatCommand::Hint,
         "/complexity" | "/bigo" | "/big-o" | "/o" => ChatCommand::Complexity,
         "/code" | "/c" => ChatCommand::ShowCode,
@@ -70,6 +79,7 @@ pub fn help_text() -> &'static str {
 ║  /clear            — Clear screen                      ║
 ║  /done             — Mark task as completed            ║
 ║  /help (/?)        — Show this help                    ║
+║  /model <name>     — Change active AI model            ║
 ║  /quit (/q)        — Exit the chat                     ║
 ║                                                        ║
 ║  Or just type your message to chat with the mentor!    ║

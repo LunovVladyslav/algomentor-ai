@@ -202,6 +202,26 @@ impl ChatSession {
                 ChatCommand::Solution => self.handle_solution().await?,
                 ChatCommand::History => self.handle_history(),
                 ChatCommand::Done => self.handle_done().await?,
+                ChatCommand::Model(name) => {
+                    self.config.set_model(&name);
+                    let mut saved = false;
+                    if let Some(dir) = &self.project_dir {
+                        if self.config.save(dir).is_ok() {
+                            saved = true;
+                        }
+                    }
+                    if !saved {
+                        let home = dirs::home_dir().unwrap_or_default();
+                        let _ = self.config.save(&home.join(".algomentor"));
+                    }
+                    
+                    // Needs to update provider if they switched openrouter model vs openai model? 
+                    // Wait, the provider instance is already created in commands.rs.
+                    // But changing the model name in config doesn't automatically tell the provider the new model, unless the provider gets it from options on each request.
+                    // Let's check completion_options: it reads `self.config.active_model()`. So we are good!
+                    
+                    renderer::render_system_message(&format!("Model successfully changed to: {}", name));
+                }
                 ChatCommand::Unknown(cmd) => {
                     renderer::render_error(&format!("Unknown command: {}. Type /help for available commands.", cmd));
                 }

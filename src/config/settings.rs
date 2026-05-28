@@ -292,6 +292,18 @@ impl AppConfig {
         }
     }
 
+    /// Set the active model
+    pub fn set_model(&mut self, model: &str) {
+        match self.provider.active.as_str() {
+            "anthropic" => self.provider.anthropic.model = model.to_string(),
+            "openrouter" => self.provider.openrouter.model = model.to_string(),
+            "ollama" => self.provider.ollama.model = model.to_string(),
+            "lmstudio" => self.provider.lmstudio.model = model.to_string(),
+            _ => self.provider.openai.model = model.to_string(),
+        }
+        self.provider.model = model.to_string(); // Update fallback too
+    }
+
     /// Get the database path for this project
     pub fn db_path(project_dir: &Path) -> PathBuf {
         project_dir.join(CONFIG_DIR).join(DB_FILE)

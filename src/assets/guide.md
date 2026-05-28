@@ -23,10 +23,24 @@ Use this mode for general software engineering and project architecture.
 
 ---
 
+## 🏗️ CLI Workflow & Flags
+
+Here are the most common ways to interact with the mentor from your terminal:
+
+- `algomentor add <task>` — Create a new algorithmic task.
+  *Flags:* `--category arrays`, `--difficulty Hard`
+- `algomentor chat <task>` — Start the interactive chat.
+- `algomentor watch <task>` — Start watch mode (auto-analyzes code on save).
+- `algomentor config model <name>` — Switch the active LLM model (e.g. `gpt-4o`, `claude-3-opus-20240229`, `llama3.2`).
+- `algomentor config provider <name>` — Switch active provider (e.g. `openai`, `anthropic`, `openrouter`).
+
+---
+
 ## 🛠️ Chat Commands
 
 While in the chat interface, you can use the following commands:
 - `/help` - Show all commands.
+- `/model <name>` - Switch the AI model without leaving the chat.
 - `/clear` - Clear the terminal screen.
 - `/quit` or `/exit` - Exit the chat session.
 
