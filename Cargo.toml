@@ -1,0 +1,70 @@
+[package]
+name = "algomentor"
+version = "0.1.0"
+edition = "2021"
+description = "AI mentor CLI for algorithmic problem solving and interview preparation"
+authors = ["AlgoMentor"]
+license = "MIT"
+readme = "README.md"
+
+[[bin]]
+name = "algomentor"
+path = "src/main.rs"
+
+[dependencies]
+# CLI & Terminal
+clap = { version = "4", features = ["derive", "env"] }
+crossterm = "0.28"
+ratatui = "0.30"
+colored = "2"
+dialoguer = "0.11"
+indicatif = "0.17"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+futures-util = "0.3"
+async-trait = "0.1"
+async-stream = "0.3"
+
+# HTTP & Networking
+reqwest = { version = "0.12", features = ["json", "stream"] }
+eventsource-stream = "0.2"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+toml = "0.8"
+
+# Database
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# File watching
+notify = "7"
+notify-debouncer-mini = "0.5"
+
+# Syntax highlighting
+syntect = { version = "5", default-features = false, features = ["default-fancy"] }
+
+# Markdown rendering
+termimad = "0.30"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "6"
+uuid = { version = "1", features = ["v4"] }
+anyhow = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+pin-project-lite = "0.2"
+bytes = "1"
+walkdir = "2.5.0"
+rustyline = "18.0.0"
+rust-embed = "8.11.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+codegen-units = 1
