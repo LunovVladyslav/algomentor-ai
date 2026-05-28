@@ -41,7 +41,6 @@ pub fn parse_command(input: &str) -> ChatCommand {
         return ChatCommand::Message(trimmed.to_string());
     }
 
-    let cmd = trimmed.to_lowercase();
     let parts: Vec<&str> = trimmed.split_whitespace().collect();
     let base_cmd = parts[0].to_lowercase();
     

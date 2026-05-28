@@ -205,7 +205,7 @@ impl ChatSession {
                 ChatCommand::Model(name) => {
                     self.config.set_model(&name);
                     let mut saved = false;
-                    if let Some(dir) = &self.project_dir {
+                    if let Some(dir) = &self.task_dir {
                         if self.config.save(dir).is_ok() {
                             saved = true;
                         }
