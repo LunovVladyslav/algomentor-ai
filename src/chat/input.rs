@@ -25,6 +25,8 @@ pub enum ChatCommand {
     Quit,
     /// Change the active model
     Model(String),
+    /// Test command Ping
+    Ping,
     /// Unknown command
     Unknown(String),
 }
@@ -57,6 +59,7 @@ pub fn parse_command(input: &str) -> ChatCommand {
         "/history" | "/hist" => ChatCommand::History,
         "/clear" | "/cls" => ChatCommand::Clear,
         "/done" | "/complete" | "/solved" => ChatCommand::Done,
+        "/ping" => ChatCommand::Ping,
         "/help" | "/?" => ChatCommand::Help,
         "/quit" | "/exit" | "/q" => ChatCommand::Quit,
         _ => ChatCommand::Unknown(trimmed.to_string()),
@@ -77,6 +80,7 @@ pub fn help_text() -> &'static str {
 ║  /history          — View chat history                 ║
 ║  /clear            — Clear screen                      ║
 ║  /done             — Mark task as completed            ║
+║  /ping             — Test command (Ping -> Pong)       ║
 ║  /help (/?)        — Show this help                    ║
 ║  /model <name>     — Change active AI model            ║
 ║  /quit (/q)        — Exit the chat                     ║

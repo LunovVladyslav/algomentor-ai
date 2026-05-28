@@ -202,6 +202,9 @@ impl ChatSession {
                 ChatCommand::Solution => self.handle_solution().await?,
                 ChatCommand::History => self.handle_history(),
                 ChatCommand::Done => self.handle_done().await?,
+                ChatCommand::Ping => {
+                    renderer::render_system_message("PONG 🏓");
+                }
                 ChatCommand::Model(name) => {
                     self.config.set_model(&name);
                     let mut saved = false;
