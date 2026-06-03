@@ -343,7 +343,8 @@ async fn add_task(
 async fn import_leetcode(
     url: String, category: Option<String>, state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let title_slug = url.trim_end_matches('/')
+    let url_no_query = url.split('?').next().unwrap_or(&url);
+    let title_slug = url_no_query.trim_end_matches('/')
         .split('/')
         .last()
         .ok_or("Invalid LeetCode URL")?;

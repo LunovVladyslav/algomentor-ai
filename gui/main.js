@@ -713,7 +713,11 @@ async function createTask() {
   if (!inputVal) { DOM.ntName.focus(); return; }
   
   const isUrl = inputVal.includes('leetcode.com/problems/');
-  const name = isUrl ? inputVal.replace(/\/$/, '').split('/').pop() : inputVal.toLowerCase().replace(/\s+/g,'-');
+  let cleanUrl = inputVal;
+  if (isUrl) {
+    try { cleanUrl = new URL(inputVal).pathname; } catch (_) {}
+  }
+  const name = isUrl ? cleanUrl.replace(/\/$/, '').split('/').pop() : inputVal.toLowerCase().replace(/\s+/g,'-');
   
   try {
     let solPath;
