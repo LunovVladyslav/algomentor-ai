@@ -319,8 +319,13 @@ async function loadTasks() {
       el.innerHTML = `
         <span class="task-name">${escapeHtml(t.title || t.name)}</span>
         ${t.difficulty ? `<span class="diff-badge ${t.difficulty}">${t.difficulty[0]}</span>` : ''}
+        <button class="task-delete-btn" title="Delete task" data-name="${escapeHtml(t.name)}">✕</button>
       `;
       el.addEventListener('click', () => openTask(t.name, t.title || t.name));
+      el.querySelector('.task-delete-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        deleteTask(t.name, t.title || t.name);
+      });
       DOM.taskList.appendChild(el);
     });
   } catch (e) {
@@ -831,8 +836,68 @@ async function createTask() {
   }
 }
 
-// ════════════════════════════════════════════════════════════
-//  Utilities
+async function deleteTask(name, title) {
+  // Inline confirmation popover instead of browser confirm()
+  const existing = document.getElementById('delete-confirm-popover');
+  if (existing) existing.remove();
+
+  const taskEl = document.querySelector(`.task-item[data-id="${CSS.escape(name)}"]`);
+  if (!taskEl) return;
+
+  const pop = document.createElement('div');
+  pop.id = 'delete-confirm-popover';
+  pop.style.cssText = `
+    position:fixed; z-index:500;
+    background:var(--bg-1); border:1px solid var(--danger);
+    border-radius:var(--radius); padding:10px 12px;
+    box-shadow:0 8px 24px rgba(0,0,0,.5);
+    display:flex; flex-direction:column; gap:8px;
+    min-width:180px; font-size:12px;
+  `;
+  pop.innerHTML = `
+    <div style="color:var(--text-1); font-weight:600;">Delete "${escapeHtml(title)}"?</div>
+    <div style="color:var(--text-3); font-size:11px;">This will permanently remove all task files.</div>
+    <div style="display:flex; gap:6px; justify-content:flex-end;">
+      <button id="del-cancel" style="padding:4px 10px; border-radius:4px; background:var(--bg-2); border:1px solid var(--border); color:var(--text-2); font-size:12px; cursor:pointer;">Cancel</button>
+      <button id="del-confirm" style="padding:4px 10px; border-radius:4px; background:var(--danger); color:#fff; font-size:12px; font-weight:600; cursor:pointer;">Delete</button>
+    </div>
+  `;
+
+  const rect = taskEl.getBoundingClientRect();
+  pop.style.left = (rect.right + 8) + 'px';
+  pop.style.top  = rect.top + 'px';
+  document.body.appendChild(pop);
+
+  // Clamp to viewport
+  const pr = pop.getBoundingClientRect();
+  if (pr.right > window.innerWidth - 8)  pop.style.left = (rect.left - pr.width - 8) + 'px';
+  if (pr.bottom > window.innerHeight - 8) pop.style.top  = (window.innerHeight - pr.height - 8) + 'px';
+
+  const cleanup = () => pop.remove();
+  pop.querySelector('#del-cancel').addEventListener('click', cleanup);
+  pop.querySelector('#del-confirm').addEventListener('click', async () => {
+    cleanup();
+    try {
+      await invoke('delete_task', { taskName: name });
+      // If this was the active task, reset the editor
+      if (S.currentTask === name) {
+        S.currentTask = null;
+        S.currentFile = null;
+        showWelcome();
+      }
+      await loadTasks();
+      toast(`"${title}" deleted`, 'success');
+    } catch (e) {
+      toast(`Error: ${e}`, 'error');
+    }
+  });
+
+  // Close on click outside
+  const onOutside = e => { if (!pop.contains(e.target) && !taskEl.contains(e.target)) { cleanup(); document.removeEventListener('mousedown', onOutside); } };
+  setTimeout(() => document.addEventListener('mousedown', onOutside), 50);
+}
+
+
 // ════════════════════════════════════════════════════════════
 function escapeHtml(t) {
   return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');

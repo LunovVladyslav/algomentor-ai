@@ -358,6 +358,27 @@ async fn add_task(
 }
 
 #[tauri::command]
+async fn delete_task(
+    task_name: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let ws = require_workspace(&state).await?;
+    let dir = discovery::resolve_task_dir(&ws, &task_name)
+        .map_err(|e| e.to_string())?
+        .ok_or_else(|| format!("Task '{}' not found", task_name))?;
+
+    // If the deleted task is currently open, clear it
+    let mut current = state.current_task.lock().await;
+    if current.as_deref() == Some(&dir) {
+        *current = None;
+    }
+    drop(current);
+
+    std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn import_leetcode(
     url: String, category: Option<String>, state: State<'_, AppState>,
 ) -> Result<String, String> {
@@ -755,7 +776,7 @@ fn main() {
             // workspace
             pick_directory, set_workspace, get_workspace, get_last_workspace, get_recent_workspaces,
             // tasks
-            get_tasks, open_task, clear_task, get_current_task, add_task, import_leetcode,
+            get_tasks, open_task, clear_task, get_current_task, add_task, delete_task, import_leetcode,
             // file i/o
             read_file, write_file, list_task_files,
             get_task_description, save_task_description, get_monaco_language,

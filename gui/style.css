@@ -247,6 +247,19 @@ html, body { height: 100%; overflow: hidden; display: flex; flex-direction: colu
 .task-item.done   { opacity: 0.45; text-decoration: line-through; }
 .task-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
 
+.task-delete-btn {
+  opacity: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition: opacity var(--t), background var(--t), color var(--t);
+}
+.task-item:hover .task-delete-btn { opacity: 1; }
+.task-delete-btn:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+
 .diff-badge {
   font-size: 9.5px; padding: 1px 5px; border-radius: 10px; flex-shrink: 0; font-weight: 600;
 }
