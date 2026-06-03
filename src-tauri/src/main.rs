@@ -362,17 +362,9 @@ async fn import_leetcode(
     if target.exists() { return Err(format!("Task '{}' already exists", title_slug)); }
     std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
     
-    let clean_content = problem.content
-        .replace("<p>", "").replace("</p>", "\n\n")
-        .replace("<strong>", "**").replace("</strong>", "**")
-        .replace("<em>", "*").replace("</em>", "*")
-        .replace("<ul>", "").replace("</ul>", "")
-        .replace("<li>", "- ").replace("</li>", "\n")
-        .replace("<pre>", "\n```\n").replace("</pre>", "\n```\n")
-        .replace("<code>", "`").replace("</code>", "`")
-        .replace("&nbsp;", " ")
-        .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
-        .replace("<sup>", "^").replace("</sup>", "");
+    let mut clean_content = html2md::parse_html(&problem.content);
+    // Fix up some encoded entities html2md might miss from LeetCode
+    clean_content = clean_content.replace("&quot;", "\"").replace("&#39;", "'").replace("&lt;", "<").replace("&gt;", ">");
         
     let diff = problem.difficulty;
     let title = problem.title;
