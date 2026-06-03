@@ -339,6 +339,69 @@ async fn add_task(
     Ok(sol_path.to_string_lossy().to_string())
 }
 
+#[tauri::command]
+async fn import_leetcode(
+    url: String, category: Option<String>, state: State<'_, AppState>,
+) -> Result<String, String> {
+    let title_slug = url.trim_end_matches('/')
+        .split('/')
+        .last()
+        .ok_or("Invalid LeetCode URL")?;
+        
+    let problem = algomentor::tools::leetcode::fetch_problem(title_slug).await?;
+    
+    let ws = require_workspace(&state).await?;
+    let config = AppConfig::load(&ws).unwrap_or_default();
+    
+    let mut target = ws.clone();
+    if let Some(ref c) = category {
+        if !c.is_empty() { target.push(c); }
+    }
+    target.push(title_slug);
+    if target.exists() { return Err(format!("Task '{}' already exists", title_slug)); }
+    std::fs::create_dir_all(&target).map_err(|e| e.to_string())?;
+    
+    let clean_content = problem.content
+        .replace("<p>", "").replace("</p>", "\n\n")
+        .replace("<strong>", "**").replace("</strong>", "**")
+        .replace("<em>", "*").replace("</em>", "*")
+        .replace("<ul>", "").replace("</ul>", "")
+        .replace("<li>", "- ").replace("</li>", "\n")
+        .replace("<pre>", "\n```\n").replace("</pre>", "\n```\n")
+        .replace("<code>", "`").replace("</code>", "`")
+        .replace("&nbsp;", " ")
+        .replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+        .replace("<sup>", "^").replace("</sup>", "");
+        
+    let diff = problem.difficulty;
+    let title = problem.title;
+    let cat = category.as_deref().unwrap_or("");
+    
+    let task_md = format!("---\ntitle: {title}\ndifficulty: {diff}\ncategory: {cat}\n---\n\n# {title}\n\n{clean_content}");
+    std::fs::write(target.join("task.md"), task_md).map_err(|e| e.to_string())?;
+    
+    let ext = match config.general.programming_language.as_str() {
+        "python" => "py", "rust" => "rs", "typescript"|"ts" => "ts",
+        "javascript"|"js" => "js", "cpp"|"c++" => "cpp",
+        "java" => "java", "go" => "go", _ => "py",
+    };
+    
+    let lc_lang = match ext {
+        "py" => "python3", "rs" => "rust", "ts" => "typescript",
+        "js" => "javascript", "cpp" => "cpp", "java" => "java",
+        "go" => "golang", _ => "python3"
+    };
+    
+    let starter_code = problem.code_snippets
+        .and_then(|snips| snips.into_iter().find(|s| s.lang_slug == lc_lang))
+        .map(|s| s.code)
+        .unwrap_or_default();
+        
+    let sol_path = target.join(format!("solution.{ext}"));
+    std::fs::write(&sol_path, starter_code).map_err(|e| e.to_string())?;
+    Ok(sol_path.to_string_lossy().to_string())
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  Commands — File I/O
 // ═══════════════════════════════════════════════════════════════
@@ -681,7 +744,7 @@ fn main() {
             // workspace
             pick_directory, set_workspace, get_workspace, get_last_workspace,
             // tasks
-            get_tasks, open_task, clear_task, get_current_task, add_task,
+            get_tasks, open_task, clear_task, get_current_task, add_task, import_leetcode,
             // file i/o
             read_file, write_file, list_task_files,
             get_task_description, save_task_description, get_monaco_language,

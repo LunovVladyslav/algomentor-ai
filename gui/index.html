@@ -237,7 +237,11 @@
         <button class="icon-btn" id="newtask-close">✕</button>
       </div>
       <div class="modal-body">
-        <label class="field-label">Task name (slug)<input id="nt-name" type="text" placeholder="two-sum"></label>
+        <div class="form-group">
+          <label>Task Name / LeetCode URL</label>
+          <input type="text" id="nt-name" placeholder="e.g. two-sum OR https://leetcode.com/problems/two-sum/">
+          <small style="color:var(--text-3); font-size:11px; margin-top:4px; display:block;">Paste a LeetCode URL to auto-import description and starter code.</small>
+        </div>
         <label class="field-label">Category (folder)<input id="nt-category" type="text" placeholder="arrays"></label>
         <label class="field-label">Difficulty
           <select id="nt-difficulty"><option>Easy</option><option selected>Medium</option><option>Hard</option></select>

@@ -709,21 +709,40 @@ async function saveSettings() {
 //  New Task modal
 // ════════════════════════════════════════════════════════════
 async function createTask() {
-  const name = DOM.ntName.value.trim().toLowerCase().replace(/\s+/g,'-');
-  if (!name) { DOM.ntName.focus(); return; }
+  const inputVal = DOM.ntName.value.trim();
+  if (!inputVal) { DOM.ntName.focus(); return; }
+  
+  const isUrl = inputVal.includes('leetcode.com/problems/');
+  const name = isUrl ? inputVal.replace(/\/$/, '').split('/').pop() : inputVal.toLowerCase().replace(/\s+/g,'-');
+  
   try {
-    const solPath = await invoke('add_task', {
-      name,
-      category:   DOM.ntCategory.value.trim() || null,
-      difficulty: DOM.ntDifficulty.value,
-    });
+    let solPath;
+    if (isUrl) {
+      DOM.newtaskCreate.textContent = 'Importing...';
+      DOM.newtaskCreate.disabled = true;
+      solPath = await invoke('import_leetcode', {
+        url: inputVal,
+        category: DOM.ntCategory.value.trim() || null,
+      });
+      DOM.newtaskCreate.textContent = 'Create Task';
+      DOM.newtaskCreate.disabled = false;
+    } else {
+      solPath = await invoke('add_task', {
+        name,
+        category:   DOM.ntCategory.value.trim() || null,
+        difficulty: DOM.ntDifficulty.value,
+      });
+    }
+    
     DOM.newtaskOverlay.classList.add('hidden');
     DOM.ntName.value = DOM.ntCategory.value = '';
     await loadTasks();
     // open the new task
     await openTask(name, name);
-    toast('Task created!', 'success');
+    toast(isUrl ? 'Task imported from LeetCode!' : 'Task created!', 'success');
   } catch (e) {
+    DOM.newtaskCreate.textContent = 'Create Task';
+    DOM.newtaskCreate.disabled = false;
     toast(`Error: ${e}`, 'error');
   }
 }
