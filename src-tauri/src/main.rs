@@ -112,22 +112,35 @@ async fn require_workspace(state: &AppState) -> Result<PathBuf, String> {
         .ok_or_else(|| "No workspace selected.".to_string())
 }
 
-fn last_workspace_file() -> Option<PathBuf> {
-    dirs::data_local_dir().map(|d| d.join("algomentor-gui").join("last_workspace.txt"))
+fn recent_workspaces_file() -> Option<PathBuf> {
+    dirs::data_local_dir().map(|d| d.join("algomentor-gui").join("recent_workspaces.json"))
+}
+
+fn load_recent_workspaces() -> Vec<String> {
+    let p = recent_workspaces_file().unwrap_or_default();
+    if let Ok(s) = std::fs::read_to_string(&p) {
+        if let Ok(ws) = serde_json::from_str::<Vec<String>>(&s) {
+            return ws.into_iter().filter(|p| PathBuf::from(p).exists()).collect();
+        }
+    }
+    Vec::new()
+}
+
+fn add_recent_workspace(path: &Path) {
+    let mut ws = load_recent_workspaces();
+    let p_str = path.to_string_lossy().to_string();
+    ws.retain(|p| p != &p_str);
+    ws.insert(0, p_str);
+    if ws.len() > 10 { ws.truncate(10); }
+    
+    if let Some(f) = recent_workspaces_file() {
+        if let Some(dir) = f.parent() { let _ = std::fs::create_dir_all(dir); }
+        let _ = std::fs::write(f, serde_json::to_string(&ws).unwrap_or_default());
+    }
 }
 
 fn load_last_workspace() -> Option<PathBuf> {
-    let p = last_workspace_file()?;
-    let s = std::fs::read_to_string(p).ok()?;
-    let pb = PathBuf::from(s.trim());
-    if pb.exists() { Some(pb) } else { None }
-}
-
-fn save_last_workspace(path: &Path) {
-    if let Some(f) = last_workspace_file() {
-        if let Some(dir) = f.parent() { let _ = std::fs::create_dir_all(dir); }
-        let _ = std::fs::write(f, path.to_string_lossy().as_bytes());
-    }
+    load_recent_workspaces().first().map(PathBuf::from)
 }
 
 fn task_key_from_dir(dir: &Option<PathBuf>) -> String {
@@ -259,7 +272,7 @@ async fn set_workspace(path: String, state: State<'_, AppState>) -> Result<(), S
         AppConfig::default().save(&pb).map_err(|e| e.to_string())?;
         Database::open(&AppConfig::db_path(&pb)).map_err(|e| e.to_string())?;
     }
-    save_last_workspace(&pb);
+    add_recent_workspace(&pb);
     *state.workspace.lock().await    = Some(pb);
     *state.current_task.lock().await = None;
     state.conversation.lock().await.clear();
@@ -274,6 +287,11 @@ async fn get_workspace(state: State<'_, AppState>) -> Result<Option<String>, Str
 #[tauri::command]
 async fn get_last_workspace() -> Result<Option<String>, String> {
     Ok(load_last_workspace().map(|p| p.to_string_lossy().to_string()))
+}
+
+#[tauri::command]
+async fn get_recent_workspaces() -> Result<Vec<String>, String> {
+    Ok(load_recent_workspaces())
 }
 
 #[tauri::command]
@@ -735,7 +753,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             // workspace
-            pick_directory, set_workspace, get_workspace, get_last_workspace,
+            pick_directory, set_workspace, get_workspace, get_last_workspace, get_recent_workspaces,
             // tasks
             get_tasks, open_task, clear_task, get_current_task, add_task, import_leetcode,
             // file i/o

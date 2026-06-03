@@ -101,8 +101,13 @@ const DOM = {
   newtaskCancel:      $('newtask-cancel'),
   newtaskCreate:      $('newtask-create'),
   ntName:             $('nt-name'),
+  ntUrl:              $('nt-url'),
   ntCategory:         $('nt-category'),
   ntDifficulty:       $('nt-difficulty'),
+  tabManual:          $('tab-manual'),
+  tabLeetcode:        $('tab-leetcode'),
+  secManual:          $('nt-manual-section'),
+  secLeetcode:        $('nt-leetcode-section'),
   // resize
   vresizeLeft:    $('vresize-left'),
   vresizeRight:   $('vresize-right'),
@@ -287,6 +292,7 @@ function showWelcome() {
 async function loadTasks() {
   try {
     const tasks = await invoke('get_tasks');
+    S.tasks = tasks;
     DOM.taskList.innerHTML = '';
 
     if (!tasks.length) {
@@ -405,6 +411,12 @@ async function handleRun() {
   // Save first
   clearTimeout(S.saveTimer);
   await autoSave();
+  await loadRecentWorkspaces();
+  await initWorkspace();
+  
+  if (!S.currentWorkspace) {
+    DOM.welcome.style.display = 'flex';
+  }
 
   // Get task dir
   const taskDir = S.currentFile.substring(0, Math.max(
@@ -646,18 +658,73 @@ function adjustInputHeight() {
 //  Workspace
 // ════════════════════════════════════════════════════════════
 async function openWorkspace() {
+  const p = await invoke('pick_directory');
+  if (p) await initWorkspace(p);
+}
+
+async function openRecentWorkspace(path) {
   try {
-    const path = await invoke('pick_directory');
-    if (!path) return;
     await invoke('set_workspace', { path });
-    S.workspace = path;
-    DOM.wsLabel.textContent = path.split(/[\\/]/).pop();
-    DOM.wsLabel.title = path;
-    await loadTasks();
-    showWelcome();
-    toast('Workspace opened', 'success');
+    await initWorkspace(path);
   } catch (e) {
-    toast(`Error: ${e}`, 'error');
+    toast(`Failed to open workspace: ${e}`, 'error');
+  }
+}
+
+async function initWorkspace(path) {
+  if (!path) {
+    const ws = await invoke('get_last_workspace');
+    if (ws) path = ws;
+  }
+  if (!path) return;
+  
+  try {
+    if (path !== await invoke('get_workspace')) {
+      await invoke('set_workspace', { path });
+    }
+    S.currentWorkspace = path;
+    const name = path.split(/[/\\]/).pop();
+    DOM.wsLabel.textContent = name;
+    DOM.welcome.style.display = 'none';
+    DOM.monacoWrap.hidden = false;
+    DOM.taskPane.hidden = false;
+    
+    await loadTasks();
+    if (S.tasks.length > 0) {
+      await openTask(S.tasks[0].id, S.tasks[0].name);
+    }
+  } catch (e) {
+    toast(`Failed to open workspace: ${e}`, 'error');
+  }
+}
+
+async function loadRecentWorkspaces() {
+  try {
+    const wlist = await invoke('get_recent_workspaces');
+    const container = $('recent-workspaces-container');
+    const list = $('recent-workspaces-list');
+    if (!wlist || wlist.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+    container.style.display = 'block';
+    list.innerHTML = '';
+    wlist.slice(0, 5).forEach(ws => {
+      const el = document.createElement('div');
+      el.className = 'recent-ws-item';
+      const name = ws.split(/[/\\]/).pop();
+      el.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <div style="display:flex; flex-direction:column;">
+          <span style="font-weight:600; color:var(--text-1);">${escapeHtml(name)}</span>
+          <span style="font-size:10px; color:var(--text-3); margin-top:-2px;">${escapeHtml(ws)}</span>
+        </div>
+      `;
+      el.addEventListener('click', () => openRecentWorkspace(ws));
+      list.appendChild(el);
+    });
+  } catch (e) {
+    console.error(e);
   }
 }
 
@@ -709,28 +776,30 @@ async function saveSettings() {
 //  New Task modal
 // ════════════════════════════════════════════════════════════
 async function createTask() {
-  const inputVal = DOM.ntName.value.trim();
-  if (!inputVal) { DOM.ntName.focus(); return; }
+  const isLeetcode = DOM.tabLeetcode.classList.contains('active');
+  const inputVal = isLeetcode ? DOM.ntUrl.value.trim() : DOM.ntName.value.trim();
   
-  const isUrl = inputVal.includes('leetcode.com/problems/');
-  let cleanUrl = inputVal;
-  if (isUrl) {
-    try { cleanUrl = new URL(inputVal).pathname; } catch (_) {}
+  if (!inputVal) {
+    isLeetcode ? DOM.ntUrl.focus() : DOM.ntName.focus();
+    return;
   }
-  const name = isUrl ? cleanUrl.replace(/\/$/, '').split('/').pop() : inputVal.toLowerCase().replace(/\s+/g,'-');
+  
+  const name = isLeetcode 
+    ? (inputVal.replace(/\/$/, '').split('/').pop() || 'unknown') 
+    : inputVal.toLowerCase().replace(/\s+/g,'-');
   
   try {
     let solPath;
-    if (isUrl) {
+    DOM.newtaskCreate.disabled = true;
+    
+    if (isLeetcode) {
       DOM.newtaskCreate.textContent = 'Importing...';
-      DOM.newtaskCreate.disabled = true;
       solPath = await invoke('import_leetcode', {
         url: inputVal,
         category: DOM.ntCategory.value.trim() || null,
       });
-      DOM.newtaskCreate.textContent = 'Create Task';
-      DOM.newtaskCreate.disabled = false;
     } else {
+      DOM.newtaskCreate.textContent = 'Creating...';
       solPath = await invoke('add_task', {
         name,
         category:   DOM.ntCategory.value.trim() || null,
@@ -739,15 +808,15 @@ async function createTask() {
     }
     
     DOM.newtaskOverlay.classList.add('hidden');
-    DOM.ntName.value = DOM.ntCategory.value = '';
+    DOM.ntName.value = DOM.ntUrl.value = DOM.ntCategory.value = '';
     await loadTasks();
-    // open the new task
     await openTask(name, name);
-    toast(isUrl ? 'Task imported from LeetCode!' : 'Task created!', 'success');
+    toast(isLeetcode ? 'Task imported from LeetCode!' : 'Task created!', 'success');
   } catch (e) {
-    DOM.newtaskCreate.textContent = 'Create Task';
-    DOM.newtaskCreate.disabled = false;
     toast(`Error: ${e}`, 'error');
+  } finally {
+    DOM.newtaskCreate.textContent = 'Create';
+    DOM.newtaskCreate.disabled = false;
   }
 }
 
@@ -894,7 +963,7 @@ function wireEvents() {
 
   // Sidebar new task
   DOM.newTaskBtn.addEventListener('click', () => {
-    if (!S.workspace) { toast('Open a workspace first', 'error'); return; }
+    if (!S.currentWorkspace) { toast('Open a workspace first', 'error'); return; }
     DOM.ntName.value = DOM.ntCategory.value = '';
     DOM.newtaskOverlay.classList.remove('hidden');
     setTimeout(() => DOM.ntName.focus(), 50);
@@ -909,10 +978,24 @@ function wireEvents() {
   });
 
   // New task modal
-  DOM.newtaskClose.addEventListener('click',  () => DOM.newtaskOverlay.classList.add('hidden'));
+  DOM.newtaskClose.addEventListener('click', () => DOM.newtaskOverlay.classList.add('hidden'));
   DOM.newtaskCancel.addEventListener('click', () => DOM.newtaskOverlay.classList.add('hidden'));
   DOM.newtaskCreate.addEventListener('click', createTask);
   DOM.ntName.addEventListener('keydown', e => { if (e.key === 'Enter') createTask(); });
+  DOM.ntUrl.addEventListener('keydown', e => { if (e.key === 'Enter') createTask(); });
+
+  DOM.tabManual.addEventListener('click', () => {
+    DOM.tabManual.classList.add('active');
+    DOM.tabLeetcode.classList.remove('active');
+    DOM.secManual.classList.remove('hidden');
+    DOM.secLeetcode.classList.add('hidden');
+  });
+  DOM.tabLeetcode.addEventListener('click', () => {
+    DOM.tabLeetcode.classList.add('active');
+    DOM.tabManual.classList.remove('active');
+    DOM.secLeetcode.classList.remove('hidden');
+    DOM.secManual.classList.add('hidden');
+  });
 
   // Overlay click-outside close
   [DOM.settingsOverlay, DOM.newtaskOverlay].forEach(ov => {
