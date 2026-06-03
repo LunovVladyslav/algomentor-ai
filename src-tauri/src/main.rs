@@ -562,6 +562,54 @@ async fn mark_done(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn run_watch(code: String, app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let ws = require_workspace(&state).await?;
+    let config = AppConfig::load(&ws).unwrap_or_default();
+    let prog_lang = config.general.programming_language.clone();
+    
+    let body = {
+        let t = state.current_task.lock().await;
+        t.as_ref().and_then(|dir| {
+            parser::parse_task_file(&dir.join("task.md")).ok().map(|d| d.body)
+        })
+    };
+    
+    let prompt = prompts::get_watch_analysis_prompt(&code, &prog_lang, body.as_deref());
+    let system = prompts::get_mentor_system_prompt(&config.general.level, &config.general.language);
+    
+    let messages = vec![
+        Message::system(&system),
+        Message::user(&prompt),
+    ];
+    
+    let provider = create_provider(&config).map_err(|e| format!("Provider error: {e}"))?;
+    let options = CompletionOptions {
+        model: config.active_model().to_string(),
+        temperature: config.mentor.temperature,
+        max_tokens: Some(500),
+        tools: None,
+    };
+    
+    app.emit("watch-start", ()).ok();
+    
+    let mut stream = provider.stream(&messages, &options).await
+        .map_err(|e| format!("Stream error: {e}"))?;
+        
+    let mut full = String::new();
+    while let Some(chunk) = stream.next().await {
+        match chunk {
+            Ok(t) => { app.emit("watch-chunk", &t).ok(); full.push_str(&t); }
+            Err(e) => { app.emit("watch-error", e.to_string()).ok(); break; }
+        }
+    }
+    app.emit("watch-done", &full).ok();
+    
+    // Does NOT save to chat history to prevent spam
+    Ok(())
+}
+
+
+#[tauri::command]
 async fn get_history(state: State<'_, AppState>) -> Result<Vec<HistoryMsg>, String> {
     let ws  = require_workspace(&state).await?;
     let key = task_key_from_dir(&*state.current_task.lock().await);
@@ -643,7 +691,7 @@ fn main() {
             get_config, save_config,
             // mentor
             send_chat, run_hint, run_explain, run_complexity, run_solution,
-            mark_done, get_history,
+            mark_done, get_history, run_watch,
             // window
             set_always_on_top,
         ])

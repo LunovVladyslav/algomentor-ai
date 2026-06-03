@@ -123,13 +123,23 @@ html, body { height: 100%; overflow: hidden; display: flex; flex-direction: colu
 .etab:hover  { background: var(--bg-2); color: var(--text-1); }
 .etab.active { background: var(--bg-2); color: var(--accent); }
 
-/* File indicator */
+/* File indicator & Lang badge */
 .file-indicator {
   font-size: 11px; color: var(--text-3);
   max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-family: 'Cascadia Code', 'Fira Code', monospace;
   margin: 0 4px;
 }
+
+.lang-badge {
+  font-size: 11px; font-weight: 600; color: var(--accent);
+  padding: 2px 8px; border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  transition: all var(--t);
+}
+.lang-badge:hover { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+.lang-badge.hidden { display: none; }
 
 /* Run / Stop buttons */
 .run-btn {
@@ -360,6 +370,49 @@ html, body { height: 100%; overflow: hidden; display: flex; flex-direction: colu
 .task-preview em { color: var(--accent-p); font-style: italic; }
 .task-preview blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--text-2); margin: 8px 0; }
 .task-preview hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+/* Watch Mode Bubble */
+.watch-bubble {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 320px;
+  background: var(--bg-1);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: slide-up-bubble 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.watch-bubble.hidden { display: none; }
+
+@keyframes slide-up-bubble {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.wb-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  font-size: 11px; font-weight: 700; color: var(--text-1);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.wb-icon { margin-right: 6px; }
+.wb-close {
+  width: 18px; height: 18px; border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  color: var(--text-2); font-size: 10px; transition: all var(--t);
+}
+.wb-close:hover { background: rgba(255,255,255,0.1); color: var(--text-1); }
+
+.wb-body {
+  padding: 12px;
+  font-size: 12.5px; line-height: 1.5; color: var(--text-1);
+  max-height: 200px; overflow-y: auto;
+}
 
 /* ── Output panel ────────────────────────────────────────── */
 .output-panel {
@@ -617,9 +670,13 @@ html, body { height: 100%; overflow: hidden; display: flex; flex-direction: colu
 .toast.error   { border-color: var(--danger);   color: var(--danger); }
 @keyframes slide-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ── Pin active ──────────────────────────────────────────── */
+/* ── Pin & Watch active ──────────────────────────────────── */
 #pin-btn.active svg { fill: var(--accent); stroke: var(--accent); }
 #pin-btn.active     { color: var(--accent); }
+
+#watch-btn[data-active="true"] { color: var(--accent-g); background: color-mix(in srgb, var(--accent-g) 15%, transparent); }
+#watch-btn[data-active="true"] svg { stroke: var(--accent-g); }
+
 
 /* ── Run animation ───────────────────────────────────────── */
 .run-spinner {

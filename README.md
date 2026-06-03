@@ -1,63 +1,52 @@
-# 🚀 AlgoMentor AI
+# AlgoMentor AI
 
-AlgoMentor is an AI-powered CLI mentor designed to help developers master algorithms and prepare for technical interviews. Instead of just giving you the answers, AlgoMentor acts like a true pair-programming partner: it analyzes your code in real-time, compiles and runs it locally in a sandbox, provides contextual hints, and evaluates Big O time/space complexity.
+AlgoMentor is an AI-powered desktop mentor designed to help developers master algorithms and prepare for technical interviews. Instead of just giving you the answers, AlgoMentor acts like a true pair-programming partner: it analyzes your code in real-time, compiles and runs it locally in a sandbox, provides contextual hints, and evaluates Big O time/space complexity.
 
-## ✨ Features
+It has been rebuilt from a CLI into a modern, native **Desktop Application** using Tauri v2, Rust, and Monaco Editor.
 
-- **🧠 RAG Knowledge Base:** Comes pre-loaded with over 14 essential algorithmic topics (DFS/BFS, Dynamic Programming, Two Pointers, Tries, etc.).
-- **⚙️ Native Compilation:** Automatically runs your code (Python, Java, Node.js, Rust) locally to catch bugs and verify test cases.
-- **🔌 MCP (Model Context Protocol):** Extend the mentor's capabilities by connecting it to tools like Context7 to fetch up-to-date framework documentation for general software engineering.
-- **👀 Watch Mode:** Monitors your source files and streams AI feedback straight to your terminal whenever you save your code in your IDE.
-- **💬 Polished CLI Chat:** Features an interactive terminal UI with command history (`rustyline`), rich markdown rendering (`termimad`), and animated loaders.
+## Features
 
-## 📦 Installation
+- **Built-in IDE:** A compact, fast Monaco-powered code editor with syntax highlighting, auto-complete, and a floating task description panel.
+- **Mentor Watch Mode:** Monitors your source files and streams AI feedback as a non-intrusive tooltip whenever you pause typing.
+- **Native Execution:** Automatically compiles and runs your code (Python, Java, Node.js, Rust, C++) locally, showing output instantly.
+- **RAG Knowledge Base:** Comes pre-loaded with over 14 essential algorithmic topics (DFS/BFS, Dynamic Programming, Two Pointers, Tries, etc.).
+- **Always-on-top Mode:** Pin the mentor over your main browser window or IDE to keep it accessible at all times.
 
-To install and build AlgoMentor from source, you need [Rust and Cargo](https://rustup.rs/) installed on your machine.
+## Installation
+
+### Prerequisites
+You need [Rust and Cargo](https://rustup.rs/) installed on your machine.
+For the Tauri frontend, ensure you have system webview dependencies (WebView2 on Windows, WebKit on macOS).
+
+### Build for macOS / Windows / Linux
 
 ```bash
 # Clone the repository
 git clone https://github.com/LunovVladyslav/algomentor-ai.git
 cd algomentor-ai
 
-# Build and run the project
-cargo build --release
+# Build the Desktop App
+cargo build -p algomentor-gui --release
+
+# Run the Desktop App directly
+cargo run -p algomentor-gui
 ```
 
-## 🚀 Quick Start
+*(Note: On macOS, the compiled `.app` bundle will be located in `target/release/bundle/macos/` if you use `cargo tauri build`.)*
 
-Initialize your workspace. This will configure your API keys (OpenAI, Anthropic, or Ollama) and auto-index the knowledge base.
-```bash
-algomentor init
-```
+## Quick Start
 
-Create a new algorithmic task:
-```bash
-algomentor add two-sum --category arrays
-```
+1. Open the application.
+2. Click **Open Workspace** to select a directory where all your algorithmic tasks will be saved.
+3. Configure your API key (OpenAI, Anthropic, or OpenRouter) by clicking the Settings gear ⚙️.
+4. Click **New Task** to create a fresh algorithmic problem.
+5. Start coding in the built-in editor, or ask the Mentor for a hint!
 
-Start the interactive chat mentor for your task:
-```bash
-algomentor chat two-sum
-```
+## Configuration
 
-For a comprehensive guide, run:
-```bash
-algomentor guide
-```
+AlgoMentor stores its configuration and SQLite history database in your workspace folder (`.algomentor/` hidden directory).
+This makes the app completely portable — you can move your workspace folder anywhere and keep your history intact!
 
-## ⚙️ Configuration
-
-AlgoMentor stores its configuration and SQLite database in your home directory: `~/.algomentor/`.
-You can manage your configuration using the CLI:
-
-```bash
-# Set your active provider (ollama, openai, anthropic)
-algomentor config set provider openai
-
-# Set your API key
-algomentor config api-key sk-your-key-here
-```
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License.

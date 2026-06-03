@@ -48,6 +48,9 @@
     <button class="lang-badge" id="lang-badge" title="Programming language — click to change in Settings">Python</button>
 
     <!-- Run controls -->
+    <button class="icon-btn" id="watch-btn" title="Watch Mode (Auto-Mentor) - OFF" data-active="false">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    </button>
     <button class="run-btn hidden" id="run-btn" title="Run code (F5)">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
       Run
@@ -126,6 +129,15 @@
         </div>
         <textarea id="task-editor" class="task-textarea" spellcheck="false" placeholder="# Task title&#10;&#10;Describe the problem here..."></textarea>
         <div id="task-preview" class="task-preview hidden"></div>
+      </div>
+
+      <!-- Watch Mode Bubble -->
+      <div class="watch-bubble hidden" id="watch-bubble">
+        <div class="wb-header">
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px; vertical-align:-2px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Mentor Watch</span>
+          <button class="wb-close" id="wb-close">✕</button>
+        </div>
+        <div class="wb-body" id="wb-body">Thinking...</div>
       </div>
 
       <!-- ── Horizontal resize handle: editor ↔ output ────── -->

@@ -20,6 +20,9 @@ const S = {
   isRunning:    false,
   isSending:    false,
   saveTimer:    null,
+  
+  watchMode:    false,
+  watchTimer:   null,
 };
 
 // ── Editor ───────────────────────────────────────────────────
@@ -39,6 +42,8 @@ const DOM = {
   tabCode:        $('tab-code'),
   tabTask:        $('tab-task'),
   fileIndicator:  $('file-indicator'),
+  langBadge:      $('lang-badge'),
+  watchBtn:       $('watch-btn'),
   runBtn:         $('run-btn'),
   stopBtn:        $('stop-btn'),
   chatToggle:     $('chat-toggle'),
@@ -62,6 +67,11 @@ const DOM = {
   ptabEdit:       $('ptab-edit'),
   ptabPreview:    $('ptab-preview'),
   saveDescBtn:    $('save-desc-btn'),
+  
+  watchBubble:    $('watch-bubble'),
+  wbClose:        $('wb-close'),
+  wbBody:         $('wb-body'),
+  
   hresizeOutput:  $('hresize-output'),
   outputPanel:    $('output-panel'),
   outputMeta:     $('output-meta'),
@@ -177,6 +187,12 @@ function initMonaco() {
     editor.onDidChangeModelContent(() => {
       clearTimeout(S.saveTimer);
       S.saveTimer = setTimeout(autoSave, 800);
+      
+      // Watch mode (debounced 4000ms after last keystroke)
+      if (S.watchMode) {
+        clearTimeout(S.watchTimer);
+        S.watchTimer = setTimeout(triggerWatch, 4000);
+      }
     });
 
     // F5 = Run, Ctrl+S = Save now
@@ -515,7 +531,7 @@ function appendMessage(role, content, scroll = true) {
   div.className = 'msg';
   div.innerHTML = `
     <div class="msg-header ${isUser ? 'user' : 'mentor'}">
-      ${isUser ? '● You' : '🧠 AlgoMentor'}
+      ${isUser ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:-2px"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>You' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:-2px"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>AlgoMentor'}
     </div>
     <div class="msg-body">${isUser
       ? escapeHtml(content)
@@ -531,7 +547,7 @@ function appendTyping() {
   div.className = 'msg';
   div.id = 'typing-msg';
   div.innerHTML = `
-    <div class="msg-header mentor">🧠 AlgoMentor</div>
+    <div class="msg-header mentor"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px; vertical-align:-2px"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>AlgoMentor</div>
     <div class="msg-body" id="typing-body">
       <div class="typing-dots"><span></span><span></span><span></span></div>
     </div>
@@ -588,7 +604,7 @@ async function sendMessage(text) {
   try {
     await invoke('send_chat', { msg: text });
   } catch (e) {
-    endStream(`⚠ ${e}`);
+    endStream(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px; vertical-align:-2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${e}`);
   }
 }
 
@@ -612,11 +628,11 @@ async function runChip(cmd) {
     await invoke(cmdMap[cmd]);
     if (cmd === 'done') {
       endStream('');
-      toast('Task marked as completed! 🎉', 'success');
+      toast('Task marked as completed!', 'success');
       loadTasks();
     }
   } catch (e) {
-    endStream(`⚠ ${e}`);
+    endStream(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px; vertical-align:-2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${e}`);
   }
 }
 
@@ -658,6 +674,11 @@ async function openSettings() {
     DOM.sLevel.value     = c.level;
     DOM.sApiKey.value    = '';
     DOM.apiKeyRow.style.display = ['ollama','lmstudio'].includes(c.provider) ? 'none' : '';
+    
+    // update badge
+    const sel = DOM.sProgLang.options[DOM.sProgLang.selectedIndex];
+    if (sel) DOM.langBadge.textContent = sel.text.split(' ')[0];
+    
   } catch (_) {}
   DOM.settingsOverlay.classList.remove('hidden');
 }
@@ -673,6 +694,11 @@ async function saveSettings() {
       apiKey:             DOM.sApiKey.value || null,
     });
     DOM.settingsOverlay.classList.add('hidden');
+    
+    // update badge
+    const sel = DOM.sProgLang.options[DOM.sProgLang.selectedIndex];
+    if (sel) DOM.langBadge.textContent = sel.text.split(' ')[0];
+    
     toast('Settings saved', 'success');
   } catch (e) {
     toast(`Error: ${e}`, 'error');
@@ -798,6 +824,23 @@ function wireEvents() {
     } catch (e) { toast(`Error: ${e}`, 'error'); }
   });
 
+  // Watch Mode
+  DOM.watchBtn.addEventListener('click', () => {
+    S.watchMode = !S.watchMode;
+    DOM.watchBtn.dataset.active = S.watchMode;
+    DOM.watchBtn.title = `Watch Mode (Auto-Mentor) - ${S.watchMode ? 'ON' : 'OFF'}`;
+    if (!S.watchMode) {
+      clearTimeout(S.watchTimer);
+      DOM.watchBubble.classList.add('hidden');
+    } else {
+      toast('Watch Mode enabled: mentor will comment when you pause typing', 'success');
+    }
+  });
+  DOM.wbClose.addEventListener('click', () => {
+    DOM.watchBubble.classList.add('hidden');
+  });
+  DOM.langBadge.addEventListener('click', openSettings);
+
   // Run / Stop
   DOM.runBtn.addEventListener('click', handleRun);
   DOM.stopBtn.addEventListener('click', handleStop);
@@ -867,7 +910,25 @@ async function wireTauriEvents() {
   await listen('mentor-start', () => startStream());
   await listen('mentor-chunk', e => chunkStream(e.payload));
   await listen('mentor-done',  e => endStream(e.payload));
-  await listen('mentor-error', e => { endStream(`⚠ ${e.payload}`); });
+  await listen('mentor-error', e => { endStream(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px; vertical-align:-2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${e.payload}`); });
+
+  // Watch mode streaming
+  let watchBuf = '';
+  await listen('watch-start', () => {
+    watchBuf = '';
+    DOM.watchBubble.classList.remove('hidden');
+    DOM.wbBody.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  });
+  await listen('watch-chunk', e => {
+    watchBuf += e.payload;
+    DOM.wbBody.innerHTML = simpleMarkdown(watchBuf);
+  });
+  await listen('watch-done', e => {
+    DOM.wbBody.innerHTML = simpleMarkdown(e.payload || watchBuf);
+  });
+  await listen('watch-error', e => {
+    DOM.wbBody.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px; vertical-align:-2px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> ${escapeHtml(e.payload)}`;
+  });
 
   // Code execution
   await listen('code-start', () => {
@@ -884,12 +945,14 @@ async function wireTauriEvents() {
   await listen('code-done', e => {
     const { exitCode, durationMs, success } = e.payload;
     const ms  = durationMs < 1000 ? `${durationMs}ms` : `${(durationMs/1000).toFixed(1)}s`;
+    const checkIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px; vertical-align:-1px"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    const crossIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px; vertical-align:-1px"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
     const msg = success
-      ? `✓ Exit 0  (${ms})`
-      : `✗ Exit ${exitCode ?? '?'}  (${ms})`;
-    DOM.outputMeta.textContent = msg;
+      ? `${checkIcon} Exit 0  (${ms})`
+      : `${crossIcon} Exit ${exitCode ?? '?'}  (${ms})`;
+    DOM.outputMeta.innerHTML = msg;
     DOM.outputMeta.className = `output-meta ${success ? 'success' : 'error'}`;
-    addOutputLine('system', msg);
+    addOutputLine('system', `Exit code ${exitCode ?? '?'} (${ms})`);
     setRunning(false);
   });
 
@@ -897,6 +960,21 @@ async function wireTauriEvents() {
     addOutputLine('error', e.payload);
     setRunning(false);
   });
+}
+
+// ════════════════════════════════════════════════════════════
+//  Watch Action
+// ════════════════════════════════════════════════════════════
+async function triggerWatch() {
+  if (!editor || !S.currentFile || !S.watchMode) return;
+  const code = editor.getValue().trim();
+  if (!code) return;
+  
+  try {
+    await invoke('run_watch', { code });
+  } catch (e) {
+    console.warn('Watch error:', e);
+  }
 }
 
 // ════════════════════════════════════════════════════════════
