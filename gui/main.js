@@ -117,13 +117,23 @@ const DOM = {
 //  Monaco initialisation
 // ════════════════════════════════════════════════════════════
 function initMonaco() {
+  const monacoBase = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/';
   window.MonacoEnvironment = {
-    getWorkerUrl: function (_workerId, _label) {
-      const base = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/';
-      const worker = base + 'vs/base/worker/workerMain.js';
-      return `data:text/javascript;charset=utf-8,${encodeURIComponent(
-        `self.MonacoEnvironment={baseUrl:'${base}'};importScripts('${worker}');`
-      )}`;
+    getWorkerUrl: function (_moduleId, label) {
+      const wrap = (workerPath) => {
+        const url = monacoBase + workerPath;
+        return `data:text/javascript;charset=utf-8,${encodeURIComponent(
+          `self.MonacoEnvironment={baseUrl:'${monacoBase}'};importScripts('${url}');`
+        )}`;
+      };
+      if (label === 'json')        return wrap('vs/language/json/json.worker.js');
+      if (label === 'css' || label === 'scss' || label === 'less')
+                                   return wrap('vs/language/css/css.worker.js');
+      if (label === 'html' || label === 'handlebars' || label === 'razor')
+                                   return wrap('vs/language/html/html.worker.js');
+      if (label === 'typescript' || label === 'javascript')
+                                   return wrap('vs/language/typescript/ts.worker.js');
+      return wrap('vs/base/worker/workerMain.js');
     }
   };
 
@@ -303,10 +313,11 @@ async function loadTasks() {
 
     tasks.forEach(t => {
       const el = document.createElement('div');
+      // active class applied only via openTask, never here
       el.className = 'task-item' + (t.completed ? ' done' : '');
-      el.dataset.name = t.name;
+      el.dataset.id = t.name;
       el.innerHTML = `
-        <span class="task-name">${t.title || t.name}</span>
+        <span class="task-name">${escapeHtml(t.title || t.name)}</span>
         ${t.difficulty ? `<span class="diff-badge ${t.difficulty}">${t.difficulty[0]}</span>` : ''}
       `;
       el.addEventListener('click', () => openTask(t.name, t.title || t.name));
@@ -319,9 +330,9 @@ async function loadTasks() {
 
 async function openTask(name, title) {
   try {
-    // Highlight active
+    // Highlight active — use data-id (set in loadTasks)
     document.querySelectorAll('.task-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.name === name);
+      el.classList.toggle('active', el.dataset.id === name);
     });
 
     // Backend: open task, get solution file path
@@ -829,21 +840,39 @@ function escapeHtml(t) {
 
 function simpleMarkdown(md) {
   if (!md) return '';
-  return md
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/```[\w]*\n?([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^---$/gm, '<hr>')
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    .replace(/^\- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>')
-    .replace(/\n{2,}/g, '</p><p>')
-    .replace(/^(?!<[a-z])((?!^\s*$).+)$/gm, '<p>$1</p>');
+  // Split off fenced code blocks to protect them
+  const parts = [];
+  let last = 0;
+  const fenceRe = /```([\w]*)\n?([\s\S]*?)```/g;
+  let m;
+  while ((m = fenceRe.exec(md)) !== null) {
+    if (m.index > last) parts.push({ type: 'text', content: md.slice(last, m.index) });
+    parts.push({ type: 'code', lang: m[1], content: m[2] });
+    last = m.index + m[0].length;
+  }
+  if (last < md.length) parts.push({ type: 'text', content: md.slice(last) });
+
+  return parts.map(p => {
+    if (p.type === 'code') {
+      const escaped = p.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return `<pre><code>${escaped}</code></pre>`;
+    }
+    // For text parts: allow raw HTML that html2md may have kept (e.g. <sup>),
+    // but still convert Markdown syntax on top of it.
+    return p.content
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^---$/gm, '<hr>')
+      .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+      .replace(/^\- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>)/g, '<ul>$1</ul>')
+      .replace(/\n{2,}/g, '</p><p>')
+      .replace(/^(?!<[a-z!])((?!\s*$).+)$/gm, '<p>$1</p>');
+  }).join('');
 }
 
 function toast(msg, type = 'info') {
