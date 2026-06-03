@@ -1,0 +1,12 @@
+pub mod analyzer;
+pub mod chat;
+pub mod config;
+pub mod dashboard;
+pub mod llm;
+pub mod memory;
+pub mod task;
+pub mod utils;
+pub mod watcher;
+pub mod tools;
+pub mod mcp;
+pub mod assets;
